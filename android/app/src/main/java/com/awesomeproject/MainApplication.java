@@ -8,11 +8,12 @@ import com.facebook.react.ReactInstanceManager;
 import com.facebook.react.ReactNativeHost;
 import com.facebook.react.ReactPackage;
 import com.facebook.soloader.SoLoader;
+import com.oney.WebRTCModule.WebRTCModulePackage;
 import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 
 
-import com.oney.WebRTCModule.WebRTCModulePackage;
+
 
 public class MainApplication extends Application implements ReactApplication {
 
@@ -27,11 +28,11 @@ public class MainApplication extends Application implements ReactApplication {
         protected List<ReactPackage> getPackages() {
           @SuppressWarnings("UnnecessaryLocalVariable")
           List<ReactPackage> packages = new PackageList(this).getPackages();
-          packages.add(new WebRTCModulePackage()); // <-- Add this line
-          // Packages that cannot be autolinked yet can be added manually here, for example:
-          // packages.add(new MyReactNativePackage());
           return packages;
         }
+
+ 
+    
 
         @Override
         protected String getJSMainModuleName() {
@@ -51,6 +52,8 @@ public class MainApplication extends Application implements ReactApplication {
     SoLoader.init(this, /* native exopackage */ false);
     initializeFlipper(this, getReactNativeHost().getReactInstanceManager());
   }
+
+   
 
   /**
    * Loads Flipper in React Native templates. Call this in the onCreate method with something like

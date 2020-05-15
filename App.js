@@ -41,6 +41,7 @@ const App: () => React$Node = () => {
           )}
           <View style={styles.body}>
           <WEBRtc/>
+          <Text>Step One</Text>
             {/* <View style={styles.sectionContainer}>
               <Text style={styles.sectionTitle}>Step One</Text>
               <Text style={styles.sectionDescription}>

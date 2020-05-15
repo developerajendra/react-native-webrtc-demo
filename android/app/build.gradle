@@ -188,6 +188,7 @@ android {
 }
 
 dependencies {
+    compile project(':WebRTCModule')
     implementation fileTree(dir: "libs", include: ["*.jar"])
     //noinspection GradleDynamicVersion
     implementation "com.facebook.react:react-native:+"  // From node_modules
@@ -205,6 +206,8 @@ dependencies {
     debugImplementation("com.facebook.flipper:flipper-fresco-plugin:${FLIPPER_VERSION}") {
         exclude group:'com.facebook.flipper'
     }
+
+    
 
     if (enableHermes) {
         def hermesPath = "../../node_modules/hermes-engine/android/";

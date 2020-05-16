@@ -12,7 +12,8 @@
   "dependencies": {
     "react": "16.11.0",
     "react-native": "0.62.2",
-    "react-native-webrtc": "^1.75.3"
+    "react-native-webrtc": "^1.75.3",
+    "socket.io": "^2.3.0"
   },
   "devDependencies": {
     "@babel/core": "^7.6.2",

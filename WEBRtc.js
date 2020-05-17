@@ -16,33 +16,67 @@ import {
 
 export default function WEBRtc (props) {
   const [localStream, setLocalStream] = useState(undefined);
+  const [cameraFacing, setCameraMode] = useState(false);
+
+  const configuration = {"iceServers": [{"url": "stun:stun.l.google.com:19302"}]};
+  const pc = new RTCPeerConnection(configuration);
 
 
   useEffect(function () {
-    mediaDevices.getUserMedia({
-      audio: true,
-      video: {
-        mandatory: {
-          minWidth: 500, // Provide your own width, height and frame rate here
-          minHeight: 300,
-          minFrameRate: 30
-        },
-        facingMode: "environment",
-        optional: []
-      }
-    }).then(setLocalStream);
-  }, [])
+
+
+    mediaDevices.enumerateDevices().then(sourceInfos => {
+         
+        let videoSourceId;
+        for (let i = 0; i < sourceInfos.length; i++) {
+            const sourceInfo = sourceInfos[i];
+            if(sourceInfo.kind == "videoinput" && sourceInfo.facing == (cameraFacing ? "front" : "environment")) {
+                videoSourceId = sourceInfo.deviceId;
+            }
+        }
+        mediaDevices.getUserMedia({
+            audio: true,
+            video: {
+            mandatory: {
+                minWidth: 500, // Provide your own width, height and frame rate here
+                minHeight: 300,
+                minFrameRate: 30
+            },
+            facingMode: (cameraFacing ? "front" : "environment"),
+            optional: (videoSourceId ? [{sourceId: videoSourceId}] : [])
+            }
+        })
+        .then(setLocalStream);
+    });
+
+
+    
+    pc.createOffer().then(desc => {
+        pc.setLocalDescription(desc).then(() => {
+            // Send pc.localDescription to peer
+            console.log('peer connection rajendra desc', desc);
+            
+            
+        });
+    });
+
+    pc.onicecandidate = function (event) {
+    // send event.candidate to peer
+    }; 
+
+ 
+  }, []);
 
   
-  
+  const cameraState = !cameraFacing ? 'Front' : 'Back';
 
 
   return (
     <View style={{flex:1}}>
-      {localStream && <RTCView style={{flex:1}} streamURL={localStream.toURL()}/>}
+      {localStream && <RTCView mirror={true} style={{flex:1}} streamURL={localStream.toURL()}/>}
       <Button
-        // onPress={()=>onPressLearnMore()}
-        title="Front"
+        onPress={()=>setCameraMode(false)}
+        title={cameraState}
         color="#841584"
         accessibilityLabel="Learn more about this purple button"
         />

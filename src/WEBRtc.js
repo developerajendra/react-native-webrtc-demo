@@ -23,7 +23,7 @@ export default function WEBRtc() {
       audio: true,
       video: {
         mandatory: {
-          minWidth: 500, // Provide your own width, height and frame rate here
+          minWidth: 0, // Provide your own width, height and frame rate here
           minHeight: 300,
           minFrameRate: 30,
         },
@@ -37,7 +37,11 @@ export default function WEBRtc() {
 
   const startCall = async () => {
     // You'll most likely need to use a STUN server at least. Look into TURN and decide if that's necessary for your project
-    const configuration = {iceServers: [{url: 'stun:stun.l.google.com:19302'}]};
+    const configuration = {iceServers: [
+      {'urls':'stun:stun.services.mozilla.com'},
+      {'urls':'stun:stun.l.google.com:19302'}
+    ]};
+
     const localPC = new RTCPeerConnection(configuration);
     const remotePC = new RTCPeerConnection(configuration);
 
@@ -124,23 +128,29 @@ export default function WEBRtc() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {!localStream && <Button title="Click to start stream" onPress={startLocalStream} />}
-      {localStream && <Button title="Click to start call" onPress={startCall} disabled={!!remoteStream} />}
 
-      {localStream && (
+        <View style={styles.streamContainer}>
+          <View style={styles.streamWrapper}>
+              <View style={styles.localStream}>
+                {localStream && <RTCView style={styles.rtc} streamURL={localStream.toURL()} />}
+                {!localStream && <Button title="Tap to start" onPress={startLocalStream} />}
+              </View>
+              <View style={styles.rtcview}>
+                {remoteStream && <RTCView style={styles.rtc} streamURL={remoteStream.toURL()} />}
+              </View>
+            </View>
+            {!!remoteStream ? <Button style={styles.toggleButtons} title="Click to stop call" onPress={closeStreams} disabled={!remoteStream} /> : localStream && <Button title="Click to start call" onPress={startCall}  />}
+        </View>
+
+      {/* {localStream && (
         <View style={styles.toggleButtons}>
           <Button title="Switch camera" onPress={switchCamera} />
           <Button title={`${isMuted ? 'Unmute' : 'Mute'} stream`} onPress={toggleMute} disabled={!remoteStream} />
         </View>
-      )}
+      )} */}
 
-      <View style={styles.rtcview}>
-        {/* {localStream && <RTCView style={styles.rtc} streamURL={localStream.toURL()} />} */}
-      </View>
-      <View style={styles.rtcview}>
-        {/* {remoteStream && <RTCView style={styles.rtc} streamURL={remoteStream.toURL()} />} */}
-      </View>
-      <Button title="Click to stop call" onPress={closeStreams} disabled={!remoteStream} />
+        
+      
     </SafeAreaView>
   );
 }
@@ -151,24 +161,44 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     height: '100%',
+    width:'100%'
   },
-  text: {
-    fontSize: 30,
+  streamContainer:{
+    backgroundColor: 'grey',
+    justifyContent: 'space-evenly',
+    alignItems: 'center',
+    height: '50%',
+    width: '100%',
+    flexDirection:'column'
+  },
+  streamWrapper:{
+    backgroundColor: 'grey',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    height: '100%',
+    width: '100%',
+    flexDirection:'row'
   },
   rtcview: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    height: '40%',
-    width: '80%',
-    backgroundColor: 'black',
+    width: '45%',
+    height: '60%',
+    borderColor:'#ccc',
+    borderWidth:3,
+    
   },
   rtc: {
-    width: '80%',
+    width: '100%',
     height: '100%',
   },
-  toggleButtons: {
-    width: '100%',
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
+  localStream:{
+    width: '45%',
+    height: '60%',
+    borderColor:'#ccc',
+    borderWidth:3,
+    display:'flex',
+    alignItems:'center',
+    flexDirection:'row',
+    justifyContent:'space-around',
+    
+  }
 });

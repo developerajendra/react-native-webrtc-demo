@@ -12,11 +12,10 @@ http.listen(port, ()=>{
     console.log('listening on ', port);  
 });
 
- 
 
 io.on('connection', socket=>{
     console.log('a user connected to socket');
-    socket.on('socketConnected', room=>{
+    socket.on('joinTheRoom', room=>{
         console.log('create or join to room', room);
         const myRoom = io.sockets.adapter.rooms[room] || {length:0};
         const numClients = myRoom.length;
@@ -24,10 +23,10 @@ io.on('connection', socket=>{
         
         if(numClients == 0 ){
             socket.join(room);
-            socket.emit('roomCreated', room);
-        }else if(numClients == 1){
+            socket.emit('created', room);
+        }else if(numClients > 0){
             socket.join(room);
-            socket.emit('roomJoined', room);
+            socket.emit('joined', room);
         }else {
             socket.emit('full', room);
         }

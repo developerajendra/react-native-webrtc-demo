@@ -22,7 +22,7 @@ const App: () => React$Node = () => {
   return (
     <View>
       {!roomID ? <RTCRoom getRoom={getRoom}/> : null}
-      {roomID ? <WEBRtc roomID={roomID} /> : null}
+      {roomID ? <WEBRtc roomNumber={roomID} /> : null}
     </View>
   );
 };

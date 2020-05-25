@@ -1,16 +1,21 @@
-import React from 'react';
-import {View, SafeAreaView, Button, StyleSheet} from 'react-native';
-
+import React, {useState, useEffect} from 'react';
+import {View, SafeAreaView, Button, StyleSheet, Text} from 'react-native';
 import {RTCPeerConnection, RTCView, mediaDevices} from 'react-native-webrtc';
+import io from "socket.io-client";
 
-export default function WEBRtc() {
-  const [localStream, setLocalStream] = React.useState();
-  const [remoteStream, setRemoteStream] = React.useState();
-  const [cachedLocalPC, setCachedLocalPC] = React.useState();
-  const [cachedRemotePC, setCachedRemotePC] = React.useState();
+export default function WEBRtc({roomID}) {
+  const [localStream, setLocalStream] = useState();
+  const [remoteStream, setRemoteStream] = useState();
+  const [cachedLocalPC, setCachedLocalPC] = useState();
+  const [cachedRemotePC, setCachedRemotePC] = useState();
 
+    
 
   const startLocalStream = async () => {
+     
+    const socket = io("http://192.168.10.90:3000");
+    socket.emit('socketConnected', roomID);
+
     // isFront will determine if the initial camera should face user or environment
     const isFront = true;
     const devices = await mediaDevices.enumerateDevices();
@@ -31,8 +36,23 @@ export default function WEBRtc() {
       },
     };
     const newStream = await mediaDevices.getUserMedia(constraints);
-    setLocalStream(newStream);
+    
+     
+    socket.on('roomCreated', room=>{
+      setLocalStream(newStream);
+    });
+
+    socket.on('roomJoined', room=>{
+      setLocalStream(newStream);
+      socket.emit('ready', roomNumber)
+    })
+
   };
+
+  useEffect(()=>{
+    startLocalStream();
+  });
+  
 
   const startCall = async () => {
     // You'll most likely need to use a STUN server at least. Look into TURN and decide if that's necessary for your project
@@ -111,13 +131,15 @@ export default function WEBRtc() {
     setCachedLocalPC();
   };
 
+ 
   return (
     <SafeAreaView style={styles.container}>
         <View style={styles.streamContainer}>
+          <Text style={styles.roomTitle}>Connected to: {roomID}</Text>
           <View style={styles.streamWrapper}>
               <View style={styles.localStream}>
                 {localStream && <RTCView style={styles.rtc} streamURL={localStream.toURL()} />}
-                {!localStream && <Button title="Tap to start" onPress={startLocalStream} />}
+                {/* {!localStream && <Button title="Tap to start" onPress={startLocalStream} />} */}
               </View>
               <View style={styles.rtcview}>
                 {remoteStream && <RTCView style={styles.rtc} streamURL={remoteStream.toURL()} />}
@@ -139,7 +161,7 @@ const styles = StyleSheet.create({
   },
   streamContainer:{
     backgroundColor: 'grey',
-    justifyContent: 'space-evenly',
+    // justifyContent: 'space-around',
     alignItems: 'center',
     height: '50%',
     width: '100%',
@@ -152,6 +174,10 @@ const styles = StyleSheet.create({
     height: '100%',
     width: '100%',
     flexDirection:'row'
+  },
+  roomTitle:{
+    fontSize:20,
+    paddingTop:20
   },
   rtcview: {
     width: '45%',

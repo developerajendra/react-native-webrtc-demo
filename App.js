@@ -6,12 +6,24 @@
  * @flow strict-local
  */
 
-import React from 'react';
+import React,{useState} from 'react';
+import {View} from 'react-native';
 import WEBRtc from './src/WEBRtc';
+import {RTCRoom} from './src/RTCRoom';
 
 const App: () => React$Node = () => {
+
+  const [roomID, setRoom] = useState('')
+
+  const getRoom  = (room)=>{
+    setRoom(room);
+  }
+
   return (
-    <WEBRtc/>
+    <View>
+      {!roomID ? <RTCRoom getRoom={getRoom}/> : null}
+      {roomID ? <WEBRtc roomID={roomID} /> : null}
+    </View>
   );
 };
  

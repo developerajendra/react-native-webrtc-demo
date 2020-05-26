@@ -14,7 +14,7 @@ export default function WEBRtc({roomNumber}) {
       const [cachedRemotePC, setCachedRemotePC] = useState();
 
       let rtcPeerConnection;
-
+ 
       const iceServers = {
           'iceServer':[
               {'urls':'stun:stun.services.mozilla.com'},
@@ -31,7 +31,7 @@ export default function WEBRtc({roomNumber}) {
 
 
 
-      const socket = io("http://192.168.10.90:3000");
+      const socket = io("https://desolate-earth-25164.herokuapp.com/");
 
 
       let init = () => {
@@ -73,16 +73,18 @@ export default function WEBRtc({roomNumber}) {
 
 
       socket.on('ready', ()=>{
+        console.log('isCaller', isCaller);
           if(isCaller){
               rtcPeerConnection = new RTCPeerConnection(iceServers);
               rtcPeerConnection.onicecandidate = onIceCandidate;
               rtcPeerConnection.ontrack = onAddStream;
               rtcPeerConnection.addTrack(localStream.getTracks()[0], localStream);
+              
               rtcPeerConnection.createOffer()
               .then(sessionDescription=>{
                   rtcPeerConnection.setLocalDescription(sessionDescription);
                   console.log('sending offer', sessionDescription);
-                  
+                  alert('offer start')
                   socket.emit('offer',{
                       type:'offer',
                       sdp: sessionDescription,
@@ -102,6 +104,7 @@ export default function WEBRtc({roomNumber}) {
 
 
       socket.on('offer', (event)=>{
+        console.log('offer', isCaller);
           if(!isCaller){
               rtcPeerConnection = new RTCPeerConnection(iceServers);
               rtcPeerConnection.onicecandidate = onIceCandidate;

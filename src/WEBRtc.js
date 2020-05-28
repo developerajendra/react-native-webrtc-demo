@@ -46,54 +46,70 @@ export default function WEBRtc() {
 
     // could also use "addEventListener" for these callbacks, but you'd need to handle removing them as well
     localPC.onicecandidate = e => {
-      try {
-        console.log('localPC icecandidate:', e.candidate);
-        if (e.candidate) {
-          remotePC.addIceCandidate(e.candidate);
-        }
-      } catch (err) {
-        console.error(`Error adding remotePC iceCandidate: ${err}`);
+      if (e.candidate) {
+        remotePC.addIceCandidate(e.candidate);
       }
     };
+
     remotePC.onicecandidate = e => {
-      try {
-        console.log('remotePC icecandidate:', e.candidate);
-        if (e.candidate) {
-          localPC.addIceCandidate(e.candidate);
-        }
-      } catch (err) {
-        console.error(`Error adding localPC iceCandidate: ${err}`);
+      if (e.candidate) {
+        localPC.addIceCandidate(e.candidate);
       }
     };
+    
     remotePC.onaddstream = e => {
-      console.log('remotePC tracking with ', e);
       if (e.stream && remoteStream !== e.stream) {
-        console.log('RemotePC received the stream', e.stream);
         setRemoteStream(e.stream);
       }
     };
 
-    // AddTrack not supported yet, so have to use old school addStream instead
-    // newStream.getTracks().forEach(track => localPC.addTrack(track, newStream));
+    
     localPC.addStream(localStream);
-    try {
-      const offer = await localPC.createOffer();
-      console.log('Offer from localPC, setLocalDescription');
-      await localPC.setLocalDescription(offer);
-      console.log('remotePC, setRemoteDescription');
-      await remotePC.setRemoteDescription(localPC.localDescription);
-      console.log('RemotePC, createAnswer');
-      const answer = await remotePC.createAnswer();
-      console.log(`Answer from remotePC: ${answer.sdp}`);
-      console.log('remotePC, setLocalDescription');
-      await remotePC.setLocalDescription(answer);
-      console.log('localPC, setRemoteDescription');
-      await localPC.setRemoteDescription(remotePC.localDescription);
-    } catch (err) {
-      console.error(err);
-    }
-    setCachedLocalPC(localPC);
-    setCachedRemotePC(remotePC);
+
+    return localPC.createOffer()
+    .then(offer=>{
+      return localPC.setLocalDescription(offer)
+      .then(()=>{
+        return remotePC.setRemoteDescription(localPC.localDescription)
+        .then(()=>{
+          return remotePC.createAnswer()
+          .then(answer=>{
+            return remotePC.setLocalDescription(answer)
+            .then(()=>{
+              return localPC.setRemoteDescription(remotePC.localDescription)
+              .then(()=>{
+                setCachedLocalPC(localPC);
+                setCachedRemotePC(remotePC);
+              })
+            })
+          })
+        });
+        })
+      })
+      
+
+      
+
+
+
+    // try {
+    //   const offer = await localPC.createOffer();
+      
+    //   await localPC.setLocalDescription(offer);
+    //   console.log('remotePC, setRemoteDescription');
+    //   await remotePC.setRemoteDescription(localPC.localDescription);
+    //   console.log('RemotePC, createAnswer');
+    //   const answer = await remotePC.createAnswer();
+    //   console.log(`Answer from remotePC: ${answer.sdp}`);
+    //   console.log('remotePC, setLocalDescription');
+    //   await remotePC.setLocalDescription(answer);
+    //   console.log('localPC, setRemoteDescription');
+    //   await localPC.setRemoteDescription(remotePC.localDescription);
+    // } catch (err) {
+    //   console.error(err);
+    // }
+    // setCachedLocalPC(localPC);
+    // setCachedRemotePC(remotePC);
   };
 
   const closeStreams = () => {

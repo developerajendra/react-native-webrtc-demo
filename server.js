@@ -23,29 +23,43 @@ io.on('connection', socket=>{
         
         if(numClients == 0 ){
             socket.join(room);
-            socket.emit('created', room);
+            socket.emit('roomCreated', room);
         }else if(numClients > 0){
             socket.join(room);
-            socket.emit('joined', room);
+            socket.emit('roomJoined', room);
         }else {
             socket.emit('full', room);
         }
     });
 
     socket.on('ready', room=>{
+        console.log('ready');
+        
         socket.broadcast.to(room).emit('ready');
     });
 
 
-    socket.on('candidate', event=>{
-        socket.broadcast.to(event.room).emit('candidate', event);
+    socket.on('candidateLocal', event=>{
+        console.log('candidateLocal');
+        socket.broadcast.to(event.room).emit('candidateLocal', event);
     });
 
+
+    socket.on('candidateRemote', event=>{
+        console.log('candidateRemote');
+        socket.broadcast.to(event.room).emit('candidateRemote', event);
+    });
+
+
+ 
+
     socket.on('offer',event=>{
+        console.log('offer');
         socket.broadcast.to(event.room).emit('offer', event.sdp);
     });
 
     socket.on('answer', event=>{
+        console.log('answer');
         socket.broadcast.to(event.room).emit('answer', event.sdp);
     });
 

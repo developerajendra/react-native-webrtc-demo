@@ -55,114 +55,66 @@ export default function WEBRtc({roomNumber}) {
 
   const localPC = new RTCPeerConnection(configuration);
   const remotePC = new RTCPeerConnection(configuration);
-  
 
- 
 
-  socket.on("ready",()=>{
-    
-      if(isCaller){
-        console.log('ready');
-        localPC.onicecandidate = onIceCandidateLocal;
-        localPC.addStream(localST);
-        // localPC.onaddstream = onAddStream;
 
-        localPC.createOffer()
-         .then(offer=>{
-            localPC.setLocalDescription(offer)
-            .then(()=>{
-              remotePC.setRemoteDescription(localPC.localDescription);
-              
-              console.log('ofer start');
-              socket.emit('offer',{
-                type:'offer',
-                sdp:offer.sdp,
-                room: roomNumber
-              });
-            });
-         }).catch(error=>{
-          console.log(error);
-      });
+  socket.on('ready', room=>{
+    // You'll most likely need to use a STUN server at least. Look into TURN and decide if that's necessary for your project
+    const configuration = {iceServers: [
+      {'urls':'stun:stun.services.mozilla.com'},
+      {'urls':'stun:stun.l.google.com:19302'}
+    ]};
+
+    const localPC = new RTCPeerConnection(configuration);
+    const remotePC = new RTCPeerConnection(configuration);
+
+    // could also use "addEventListener" for these callbacks, but you'd need to handle removing them as well
+    localPC.onicecandidate = e => {
+      if (e.candidate) {
+        remotePC.addIceCandidate(e.candidate);
       }
-    });
+    };
 
-
-    socket.on("offer",e=>{
-
-        if(!isCaller){
-          console.log('offer');
-            remotePC.onicecandidate = onIceCandidateRemote;
-            remotePC.onaddstream = onAddStream;
-            
-            // remotePC.setRemoteDescription(localPC.localDescription);
-            remotePC.createAnswer().then(answer=>{
-                console.log('answer start');  
-                  remotePC.setLocalDescription(answer)
-                  .then(()=>{
-                      localPC.setRemoteDescription(remotePC.localDescription);
-                      socket.emit('answer',{
-                        type:'answer',
-                        sdp: answer.sdp,
-                        room: roomNumber
-                    }); 
-                  });                 
-            }).catch(error=>{
-              console.log("answer error", error);
-          });
-          // console.log(`Answer from remotePC: ${answer.sdp}`);
-        }
-        
-    });
-        
-    function onIceCandidateLocal(e){
+    remotePC.onicecandidate = e => {
       if (e.candidate) {
-            socket.emit('candidateLocal',{
-                type: 'candidateLocal',
-                label: e.candidate.sdpMLineIndex,
-                id: e.candidate.sdpMid,
-                candidate: e.candidate.candidate,
-                room: roomNumber
-            });
-        }
-    }
-
-         
-    function onIceCandidateRemote(e){
-      if (e.candidate) {
-            socket.emit('candidateRemote',{
-                type: 'candidateRemote',
-                label: e.candidate.sdpMLineIndex,
-                id: e.candidate.sdpMid,
-                candidate: e.candidate.candidate,
-                room: roomNumber
-            });
-        }
-    }
-
-    socket.on('candidateLocal', e=>{
-      console.log('candidateLocal', e.candidate);
-      remotePC.addIceCandidate(e.candidate);
-    });
-
-    socket.on('candidateRemote', e=>{
-      console.log('candidateRemote');
-      localPC.addIceCandidate(e.candidate);
-    });
-
-
-    function onAddStream(e){
-      console.log('add remote stream', e.steram);
-      
+        localPC.addIceCandidate(e.candidate);
+      }
+    };
+    
+    remotePC.onaddstream = e => {
       if (e.stream && remoteStream !== e.stream) {
         setRemoteStream(e.stream);
       }
     };
 
-   
-    socket.on('answer', e=>{
-      console.log('answer');
-      localPC.setRemoteDescription(remotePC.localDescription);
-    });
+    
+    localPC.addStream(localStream);
+
+    //send offer form here(ready)
+    return localPC.createOffer()
+    .then(offer=>{
+      return localPC.setLocalDescription(offer)
+      .then(()=>{
+
+        //accept offer from here(ready)
+        return remotePC.setRemoteDescription(localPC.localDescription)
+        .then(()=>{
+          return remotePC.createAnswer()
+          .then(answer=>{
+            return remotePC.setLocalDescription(answer)
+            .then(()=>{
+
+              //send answer from here
+              return localPC.setRemoteDescription(remotePC.localDescription);
+              //accept answer
+            })
+          })
+        });
+        })
+      })
+      
+});
+
 
         
   return (
@@ -235,3 +187,117 @@ const styles = StyleSheet.create({
   }
 });
 
+
+
+
+
+
+
+
+
+
+
+// socket.on("ready",()=>{
+    
+//   if(isCaller){
+//     console.log('ready');
+//     localPC.onicecandidate = onIceCandidateLocal;
+//     localPC.addStream(localST);
+//     // localPC.onaddstream = onAddStream;
+
+//     localPC.createOffer()
+//      .then(offer=>{
+//         localPC.setLocalDescription(offer)
+//         .then(()=>{
+//           remotePC.setRemoteDescription(localPC.localDescription);
+          
+//           console.log('ofer start');
+//           socket.emit('offer',{
+//             type:'offer',
+//             sdp:offer.sdp,
+//             room: roomNumber
+//           });
+//         });
+//      }).catch(error=>{
+//       console.log(error);
+//   });
+//   }
+// });
+
+
+// socket.on("offer",e=>{
+
+//     if(!isCaller){
+//       console.log('offer');
+//         remotePC.onicecandidate = onIceCandidateRemote;
+//         remotePC.onaddstream = onAddStream;
+        
+//         // remotePC.setRemoteDescription(localPC.localDescription);
+//         remotePC.createAnswer().then(answer=>{
+//             console.log('answer start');  
+//               remotePC.setLocalDescription(answer)
+//               .then(()=>{
+//                   localPC.setRemoteDescription(remotePC.localDescription);
+//                   socket.emit('answer',{
+//                     type:'answer',
+//                     sdp: answer.sdp,
+//                     room: roomNumber
+//                 }); 
+//               });                 
+//         }).catch(error=>{
+//           console.log("answer error", error);
+//       });
+//       // console.log(`Answer from remotePC: ${answer.sdp}`);
+//     }
+    
+// });
+    
+// function onIceCandidateLocal(e){
+//   if (e.candidate) {
+//         socket.emit('candidateLocal',{
+//             type: 'candidateLocal',
+//             label: e.candidate.sdpMLineIndex,
+//             id: e.candidate.sdpMid,
+//             candidate: e.candidate.candidate,
+//             room: roomNumber
+//         });
+//     }
+// }
+
+     
+// function onIceCandidateRemote(e){
+//   if (e.candidate) {
+//         socket.emit('candidateRemote',{
+//             type: 'candidateRemote',
+//             label: e.candidate.sdpMLineIndex,
+//             id: e.candidate.sdpMid,
+//             candidate: e.candidate.candidate,
+//             room: roomNumber
+//         });
+//     }
+// }
+
+// socket.on('candidateLocal', e=>{
+//   console.log('candidateLocal', e.candidate);
+//   remotePC.addIceCandidate(e.candidate);
+// });
+
+// socket.on('candidateRemote', e=>{
+//   console.log('candidateRemote');
+//   localPC.addIceCandidate(e.candidate);
+// });
+
+
+// function onAddStream(e){
+//   console.log('add remote stream', e.steram);
+  
+//   if (e.stream && remoteStream !== e.stream) {
+//     setRemoteStream(e.stream);
+//   }
+// };
+
+
+// socket.on('answer', e=>{
+//   console.log('answer');
+//   localPC.setRemoteDescription(remotePC.localDescription);
+// });

@@ -8,8 +8,8 @@ export default function WEBRtc({roomNumber}) {
   const [remoteStream, setRemoteStream] = useState();
    
 
-  let isCaller, localST;
-  const socket = io("http://192.168.0.104:3000");
+  let isCaller, localST, peerConnection;
+  const socket = io("http://192.168.0.102:3000", {transports: ['websocket']});
 
   const constraints = {
     audio: true,
@@ -53,70 +53,105 @@ export default function WEBRtc({roomNumber}) {
   ]};
 
 
-  const localPC = new RTCPeerConnection(configuration);
-  const remotePC = new RTCPeerConnection(configuration);
+  // const localPC = new RTCPeerConnection(configuration);
+  // const remotePC = new RTCPeerConnection(configuration);
 
-
-
-  socket.on('ready', room=>{
-    // You'll most likely need to use a STUN server at least. Look into TURN and decide if that's necessary for your project
-    const configuration = {iceServers: [
-      {'urls':'stun:stun.services.mozilla.com'},
-      {'urls':'stun:stun.l.google.com:19302'}
-    ]};
-
-    const localPC = new RTCPeerConnection(configuration);
-    const remotePC = new RTCPeerConnection(configuration);
-
-    // could also use "addEventListener" for these callbacks, but you'd need to handle removing them as well
-    localPC.onicecandidate = e => {
-      if (e.candidate) {
-        remotePC.addIceCandidate(e.candidate);
+  // const peerConnection = new RTCPeerConnection(configuration);
+ 
+    socket.on('ready', room=>{
+      if(isCaller){
+        console.log('ready');
+        peerConnection = new RTCPeerConnection(configuration);
+        peerConnection.onicecandidate = onIceCandidate;
+        peerConnection.onaddstream = onAddStream;
+        peerConnection.createOffer()
+        .then(offer=>{
+          return peerConnection.setLocalDescription(offer)
+          .then(()=>{
+            console.log('emit offer');
+              socket.emit('offer',{
+                type:'offer',
+                sdp:offer,
+                room: roomNumber
+              });
+            })
+          })
       }
-    };
+    });
 
-    remotePC.onicecandidate = e => {
-      if (e.candidate) {
-        localPC.addIceCandidate(e.candidate);
-      }
-    };
-    
-    remotePC.onaddstream = e => {
-      if (e.stream && remoteStream !== e.stream) {
-        setRemoteStream(e.stream);
-      }
-    };
+    socket.on("offer",e=>{
+      
+      if(!isCaller){
+        peerConnection = new RTCPeerConnection(configuration);
+        console.log('offer');
+        peerConnection.onicecandidate = onIceCandidate;
+        peerConnection.onaddstream = onAddStream;
 
-    
-    localPC.addStream(localStream);
-
-    //send offer form here(ready)
-    return localPC.createOffer()
-    .then(offer=>{
-      return localPC.setLocalDescription(offer)
-      .then(()=>{
+        console.log('about to create answer', e);
 
         //accept offer from here(ready)
-        return remotePC.setRemoteDescription(localPC.localDescription)
+        peerConnection.setRemoteDescription(e)
         .then(()=>{
-          return remotePC.createAnswer()
+          return peerConnection.createAnswer()
           .then(answer=>{
-            return remotePC.setLocalDescription(answer)
+            return peerConnection.setLocalDescription(answer)
             .then(()=>{
-
-              //send answer from here
-              return localPC.setRemoteDescription(remotePC.localDescription);
-              //accept answer
+              console.log('emit answer');
+                socket.emit('answer',{
+                  type:'answer',
+                  sdp: answer,
+                  room: roomNumber
+              }); 
             })
           })
         });
-        })
-      })
+      }
       
-});
+    });
 
 
+
+    function onAddStream(e){
+      console.log('remote stream', e);
+      if (e.stream && remoteStream !== e.stream) {
+        console.log('remote stream', e.stream);
         
+        setRemoteStream(e.stream);
+      }
+  };
+
+
+    function onIceCandidate(event){
+      console.log('ice candidate');
+      
+      if(event.candidate){
+          console.log('sending ice candidate', event.candidate);
+          
+          socket.emit('candidate',{
+              type: 'candidate',
+              label: event.candidate.sdpMLineIndex,
+              id: event.candidate.sdpMid,
+              candidate: event.candidate.candidate,
+              room: roomNumber
+          });
+      }
+  }
+  
+
+    socket.on('candidate', e=>{
+      console.log('candidate', isCaller);
+      peerConnection.addIceCandidate(e);
+      peerConnection.addStream(localStream);
+    });
+
+    socket.on('answer', e=>{
+      console.log('answer');
+      peerConnection.setRemoteDescription(e);
+    });
+    
+    
+    
+   
   return (
     <SafeAreaView style={styles.container}>
     <View style={styles.streamContainer}>

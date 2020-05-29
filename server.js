@@ -39,19 +39,11 @@ io.on('connection', socket=>{
     });
 
 
-    socket.on('candidateLocal', event=>{
-        console.log('candidateLocal');
-        socket.broadcast.to(event.room).emit('candidateLocal', event);
+    socket.on('candidate', event=>{
+        console.log('candidate');
+        socket.broadcast.to(event.room).emit('candidate', event);
     });
 
-
-    socket.on('candidateRemote', event=>{
-        console.log('candidateRemote');
-        socket.broadcast.to(event.room).emit('candidateRemote', event);
-    });
-
-
- 
 
     socket.on('offer',event=>{
         console.log('offer');

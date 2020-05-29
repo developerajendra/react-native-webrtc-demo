@@ -13,7 +13,7 @@ import {RTCRoom} from './src/RTCRoom';
 
 const App: () => React$Node = () => {
 
-  const [roomID, setRoom] = useState('')
+  const [roomID, setRoom] = useState('hello')
 
   const getRoom  = (room)=>{
     setRoom(room);

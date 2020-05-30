@@ -1,40 +1,31 @@
-import React from 'react';
+import React,{useEffect, Component} from 'react';
 import {View, SafeAreaView, Button, StyleSheet} from 'react-native';
 
 import {RTCPeerConnection, RTCView, mediaDevices} from 'react-native-webrtc';
 
-export default function WEBRtc() {
-  const [localStream, setLocalStream] = React.useState();
-  const [remoteStream, setRemoteStream] = React.useState();
-  const [cachedLocalPC, setCachedLocalPC] = React.useState();
-  const [cachedRemotePC, setCachedRemotePC] = React.useState();
+class WEBRtc extends Component {
+   state = {
+    localStream:null,
+    remoteStream:null,
+    cachedLocalPC:null,
+    chedRemotePC:null
+  }
+ 
 
-
-  const startLocalStream = async () => {
-    // isFront will determine if the initial camera should face user or environment
-    const isFront = true;
-    const devices = await mediaDevices.enumerateDevices();
-
-    const facing = isFront ? 'front' : 'environment';
-    const videoSourceId = devices.find(device => device.kind === 'videoinput' && device.facing === facing);
-    const facingMode = isFront ? 'user' : 'environment';
-    const constraints = {
-      audio: true,
-      video: {
-        mandatory: {
-          minWidth: 0, // Provide your own width, height and frame rate here
-          minHeight: 300,
-          minFrameRate: 30,
-        },
-        facingMode,
-        optional: videoSourceId ? [{sourceId: videoSourceId}] : [],
-      },
-    };
-    const newStream = await mediaDevices.getUserMedia(constraints);
-    setLocalStream(newStream);
+    startLocalStream =  () => {
+      mediaDevices.getUserMedia({
+        audio:true,
+        video:false
+      }).then(newStream=>{
+        this.setState({localStream:newStream}, ()=>{
+          this.startCall();
+        });
+      }).catch(error=>console.log(error));
   };
 
-  const startCall = async () => {
+
+
+    startCall =   () => {
     // You'll most likely need to use a STUN server at least. Look into TURN and decide if that's necessary for your project
     const configuration = {iceServers: [
       {'urls':'stun:stun.services.mozilla.com'},
@@ -58,13 +49,13 @@ export default function WEBRtc() {
     };
     
     remotePC.onaddstream = e => {
-      if (e.stream && remoteStream !== e.stream) {
-        setRemoteStream(e.stream);
+      if (e.stream && this.state.remoteStream !== e.stream) {
+        this.setState({remoteStream:e.stream});
       }
     };
 
     
-    localPC.addStream(localStream);
+  localPC.addStream(this.state.localStream);
 
     return localPC.createOffer()
     .then(offer=>{
@@ -78,41 +69,18 @@ export default function WEBRtc() {
             .then(()=>{
               return localPC.setRemoteDescription(remotePC.localDescription)
               .then(()=>{
-                setCachedLocalPC(localPC);
-                setCachedRemotePC(remotePC);
+                this.setState({cachedLocalPC:localPC});
+                this.setState({chedRemotePC:remotePC});
               })
             })
           })
         });
         })
       })
-      
-
-      
-
-
-
-    // try {
-    //   const offer = await localPC.createOffer();
-      
-    //   await localPC.setLocalDescription(offer);
-    //   console.log('remotePC, setRemoteDescription');
-    //   await remotePC.setRemoteDescription(localPC.localDescription);
-    //   console.log('RemotePC, createAnswer');
-    //   const answer = await remotePC.createAnswer();
-    //   console.log(`Answer from remotePC: ${answer.sdp}`);
-    //   console.log('remotePC, setLocalDescription');
-    //   await remotePC.setLocalDescription(answer);
-    //   console.log('localPC, setRemoteDescription');
-    //   await localPC.setRemoteDescription(remotePC.localDescription);
-    // } catch (err) {
-    //   console.error(err);
-    // }
-    // setCachedLocalPC(localPC);
-    // setCachedRemotePC(remotePC);
   };
 
-  const closeStreams = () => {
+   closeStreams = () => {
+     let {cachedLocalPC, localStream, cachedRemotePC, remoteStream} = this.state;
     if (cachedLocalPC) {
       cachedLocalPC.removeStream(localStream);
       cachedLocalPC.close();
@@ -121,29 +89,38 @@ export default function WEBRtc() {
       cachedRemotePC.removeStream(remoteStream);
       cachedRemotePC.close();
     }
-    setLocalStream();
-    setRemoteStream();
-    setCachedRemotePC();
-    setCachedLocalPC();
+    this.setState({cachedLocalPC:null});
+    this.setState({chedRemotePC:null});
+    this.setState({remoteStream:null});
+    this.setState({localStream:null});
   };
+ 
+ 
 
-  return (
-    <SafeAreaView style={styles.container}>
-        <View style={styles.streamContainer}>
-          <View style={styles.streamWrapper}>
-              <View style={styles.localStream}>
-                {localStream && <RTCView style={styles.rtc} streamURL={localStream.toURL()} />}
-                {!localStream && <Button title="Tap to start" onPress={startLocalStream} />}
+ render(){
+   let {localStream, remoteStream} = this.state;
+    return (
+      <SafeAreaView style={styles.container}>
+          <View style={styles.streamContainer}>
+            <View style={styles.streamWrapper}>
+                <View style={styles.localStream}>
+                  {localStream && <RTCView style={styles.rtc} streamURL={localStream.toURL()} />}
+                  {!localStream && <Button title="Tap to start" onPress={this.startLocalStream} />}
+                </View>
+                <View style={styles.rtcview}>
+                  {remoteStream && <RTCView style={styles.rtc} streamURL={remoteStream.toURL()} />}
+                </View>
               </View>
-              <View style={styles.rtcview}>
-                {remoteStream && <RTCView style={styles.rtc} streamURL={remoteStream.toURL()} />}
-              </View>
-            </View>
-            {!!remoteStream ? <Button style={styles.toggleButtons} title="Click to stop call" onPress={closeStreams} disabled={!remoteStream} /> : localStream && <Button title="Click to start call" onPress={startCall}  />}
-        </View>
-    </SafeAreaView>
-  );
+              {!!remoteStream ? <Button style={styles.toggleButtons} title="Click to stop call" onPress={this.closeStreams} disabled={!remoteStream} /> : localStream && <Button title="Click to start call" onPress={this.startCall}  />}
+          </View>
+      </SafeAreaView>
+    );
+  }
 }
+export default WEBRtc;
+
+
+
 
 const styles = StyleSheet.create({
   container: {

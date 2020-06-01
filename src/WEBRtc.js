@@ -8,7 +8,7 @@ export default function WEBRtc({roomNumber}) {
   const [remoteStream, setRemoteStream] = useState();
    
 
-  let isCaller, localST, peerConnection;
+  let isCaller, peerConnection;
   const socket = io("https://desolate-earth-25164.herokuapp.com/");
   // const socket = io("http://192.168.0.102:3000");
   
@@ -48,29 +48,24 @@ export default function WEBRtc({roomNumber}) {
         });
     });
   
-  
-  
-  
+   
+   
+useEffect(()=>{
     const configuration = {iceServers: [
       {'urls':'stun:stun.services.mozilla.com'},
       {'urls':'stun:stun.l.google.com:19302'}
     ]};
-  
-  
-    // const localPC = new RTCPeerConnection(configuration);
-    // const remotePC = new RTCPeerConnection(configuration);
-  
-    // const peerConnection = new RTCPeerConnection(configuration);
 
-useEffect(()=>{
-  
 
     socket.on('ready', room=>{
       if(isCaller){
         console.log('ready');
         peerConnection = new RTCPeerConnection(configuration);
         peerConnection.onicecandidate = onIceCandidate;
-         
+         peerConnection.iceConnectionState = (e)=>{
+           console.log('iceConnectionState', e);
+           
+         }
         peerConnection.onaddstream = onAddStream;
         peerConnection.createOffer()
         .then(offer=>{
@@ -92,11 +87,13 @@ useEffect(()=>{
         if(!isCaller){
           peerConnection = new RTCPeerConnection(configuration);
           console.log('offer');
-          console.log('peerConnection', peerConnection);
           
           peerConnection.onicecandidate = onIceCandidate;
           peerConnection.onaddstream = onAddStream;
-
+          peerConnection.iceConnectionState = (e)=>{
+            console.log('iceConnectionState', e);
+            
+          }
           console.log('about to create answer');
 
           //accept offer from here(ready)
@@ -106,7 +103,7 @@ useEffect(()=>{
             .then(answer=>{
               return peerConnection.setLocalDescription(answer)
               .then(()=>{
-                console.log('emit answer');
+                console.log('emit answer', answer);
                   socket.emit('answer',{
                     type:'answer',
                     sdp: answer,
@@ -157,7 +154,7 @@ useEffect(()=>{
   });
 
   socket.on('answer', e=>{
-    console.log('answer');
+    console.log('answer',e);
     peerConnection.setRemoteDescription(e);
   });
   

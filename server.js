@@ -1,14 +1,14 @@
 const express = require('express');
 const app = express();
-let http = require('http').Server(app);
+let https = require('https').Server(app);
 
 const port = process.env.PORT || 3000;
 
-let io = require('socket.io')(http);
+let io = require('socket.io')(https);
 
 // app.use(express.static('public'))
 
-http.listen(port, ()=>{
+https.listen(port, ()=>{
     console.log('listening on ', port);  
 });
 

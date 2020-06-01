@@ -12,6 +12,7 @@ http.listen(port, ()=>{
     console.log('listening on ', port);  
 });
 
+io.origins('*:*') 
 
 io.on('connection', socket=>{
     console.log('a user connected to socket');

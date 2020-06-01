@@ -9,11 +9,13 @@ export default function WEBRtc({roomNumber}) {
    
 
   let isCaller, localST, peerConnection;
-  const socket = io("http://192.168.0.102:3000", {transports: ['websocket']});
+  const socket = io("https://desolate-earth-25164.herokuapp.com/");
+  // const socket = io("http://192.168.0.102:3000");
+  
 
   const constraints = {
     audio: true,
-    video:false
+    video:true
   };
 
 
@@ -24,45 +26,51 @@ export default function WEBRtc({roomNumber}) {
       socket.emit('joinTheRoom', roomNumber);
   };
 
-  socket.on('roomCreated', room=>{
-    console.log('room created');
-    
-    mediaDevices.getUserMedia(constraints)
-      .then(stream=>{
-        setLocalStream(stream);
-        localST = stream;
-        isCaller = true;
-      })
-  });
-
-  socket.on('roomJoined', room=>{
-    console.log('room joined');
-    mediaDevices.getUserMedia(constraints)
-      .then(stream=>{
-        setLocalStream(stream);
-        socket.emit('ready', roomNumber)
-      });
-  });
-
-
-
-
-  const configuration = {iceServers: [
-    {'urls':'stun:stun.services.mozilla.com'},
-    {'urls':'stun:stun.l.google.com:19302'}
-  ]};
-
-
-  // const localPC = new RTCPeerConnection(configuration);
-  // const remotePC = new RTCPeerConnection(configuration);
-
-  // const peerConnection = new RTCPeerConnection(configuration);
  
+
+    socket.on('roomCreated', room=>{
+      console.log('room created');
+      
+      mediaDevices.getUserMedia(constraints)
+        .then(stream=>{
+          setLocalStream(stream);
+          localST = stream;
+          isCaller = true;
+        })
+    });
+  
+    socket.on('roomJoined', room=>{
+      console.log('room joined');
+      mediaDevices.getUserMedia(constraints)
+        .then(stream=>{
+          setLocalStream(stream);
+          socket.emit('ready', roomNumber)
+        });
+    });
+  
+  
+  
+  
+    const configuration = {iceServers: [
+      {'urls':'stun:stun.services.mozilla.com'},
+      {'urls':'stun:stun.l.google.com:19302'}
+    ]};
+  
+  
+    // const localPC = new RTCPeerConnection(configuration);
+    // const remotePC = new RTCPeerConnection(configuration);
+  
+    // const peerConnection = new RTCPeerConnection(configuration);
+
+useEffect(()=>{
+  
+
     socket.on('ready', room=>{
       if(isCaller){
         console.log('ready');
         peerConnection = new RTCPeerConnection(configuration);
         peerConnection.onicecandidate = onIceCandidate;
+         
         peerConnection.onaddstream = onAddStream;
         peerConnection.createOffer()
         .then(offer=>{
@@ -81,36 +89,39 @@ export default function WEBRtc({roomNumber}) {
 
     socket.on("offer",e=>{
       
-      if(!isCaller){
-        peerConnection = new RTCPeerConnection(configuration);
-        console.log('offer');
-        peerConnection.onicecandidate = onIceCandidate;
-        peerConnection.onaddstream = onAddStream;
+        if(!isCaller){
+          peerConnection = new RTCPeerConnection(configuration);
+          console.log('offer');
+          console.log('peerConnection', peerConnection);
+          
+          peerConnection.onicecandidate = onIceCandidate;
+          peerConnection.onaddstream = onAddStream;
 
-        console.log('about to create answer', e);
+          console.log('about to create answer');
 
-        //accept offer from here(ready)
-        peerConnection.setRemoteDescription(e)
-        .then(()=>{
-          return peerConnection.createAnswer()
-          .then(answer=>{
-            return peerConnection.setLocalDescription(answer)
-            .then(()=>{
-              console.log('emit answer');
-                socket.emit('answer',{
-                  type:'answer',
-                  sdp: answer,
-                  room: roomNumber
-              }); 
+          //accept offer from here(ready)
+          peerConnection.setRemoteDescription(e)
+          .then(()=>{
+            return peerConnection.createAnswer()
+            .then(answer=>{
+              return peerConnection.setLocalDescription(answer)
+              .then(()=>{
+                console.log('emit answer');
+                  socket.emit('answer',{
+                    type:'answer',
+                    sdp: answer,
+                    room: roomNumber
+                }); 
+              })
             })
-          })
-        });
-      }
-      
-    });
+          });
+        }
+        
+      });
 
 
 
+     
     function onAddStream(e){
       console.log('remote stream', e);
       if (e.stream && remoteStream !== e.stream) {
@@ -136,21 +147,22 @@ export default function WEBRtc({roomNumber}) {
           });
       }
   }
+
+    
+
+  socket.on('candidate', e=>{
+    console.log('candidate', isCaller);
+    peerConnection.addIceCandidate(e);
+    peerConnection.addStream(localStream);
+  });
+
+  socket.on('answer', e=>{
+    console.log('answer');
+    peerConnection.setRemoteDescription(e);
+  });
   
-
-    socket.on('candidate', e=>{
-      console.log('candidate', isCaller);
-      peerConnection.addIceCandidate(e);
-      peerConnection.addStream(localStream);
-    });
-
-    socket.on('answer', e=>{
-      console.log('answer');
-      peerConnection.setRemoteDescription(e);
-    });
-    
-    
-    
+  
+});
    
   return (
     <SafeAreaView style={styles.container}>

@@ -55,7 +55,7 @@ useEffect(()=>{
       {'urls':'stun:stun.services.mozilla.com'},
       {'urls':'stun:stun.l.google.com:19302'}
     ]};
-
+    https://github.com/developerajendra/react-native-webrtc-demo
 
     socket.on('ready', room=>{
       if(isCaller){

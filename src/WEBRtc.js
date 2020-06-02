@@ -6,7 +6,7 @@ import io from "socket.io-client";
 export default function WEBRtc({roomNumber}) {
   const [localStream, setLocalStream] = useState();
   const [remoteStream, setRemoteStream] = useState();
-   
+  
 
   let isCaller, peerConnection;
   const socket = io("https://desolate-earth-25164.herokuapp.com/");
@@ -15,7 +15,7 @@ export default function WEBRtc({roomNumber}) {
 
   const constraints = {
     audio: true,
-    video:true
+    video:false
   };
 
 
@@ -26,15 +26,15 @@ export default function WEBRtc({roomNumber}) {
       socket.emit('joinTheRoom', roomNumber);
   };
 
+useEffect(()=>{
  
-
     socket.on('roomCreated', room=>{
       console.log('room created');
       
       mediaDevices.getUserMedia(constraints)
         .then(stream=>{
           setLocalStream(stream);
-          localST = stream;
+           
           isCaller = true;
         })
     });
@@ -50,7 +50,6 @@ export default function WEBRtc({roomNumber}) {
   
    
    
-useEffect(()=>{
     const configuration = {iceServers: [
       {'urls':'stun:stun.services.mozilla.com'},
       {'urls':'stun:stun.l.google.com:19302'}
@@ -62,10 +61,6 @@ useEffect(()=>{
         console.log('ready');
         peerConnection = new RTCPeerConnection(configuration);
         peerConnection.onicecandidate = onIceCandidate;
-         peerConnection.iceConnectionState = (e)=>{
-           console.log('iceConnectionState', e);
-           
-         }
         peerConnection.onaddstream = onAddStream;
         peerConnection.createOffer()
         .then(offer=>{
@@ -90,10 +85,7 @@ useEffect(()=>{
           
           peerConnection.onicecandidate = onIceCandidate;
           peerConnection.onaddstream = onAddStream;
-          peerConnection.iceConnectionState = (e)=>{
-            console.log('iceConnectionState', e);
-            
-          }
+          
           console.log('about to create answer');
 
           //accept offer from here(ready)
@@ -103,7 +95,6 @@ useEffect(()=>{
             .then(answer=>{
               return peerConnection.setLocalDescription(answer)
               .then(()=>{
-                console.log('emit answer', answer);
                   socket.emit('answer',{
                     type:'answer',
                     sdp: answer,
@@ -159,7 +150,7 @@ useEffect(()=>{
   });
   
   
-});
+}, [localStream, remoteStream ]);
    
   return (
     <SafeAreaView style={styles.container}>

@@ -1,6 +1,14 @@
 import React, {useState, useEffect} from 'react';
 import {View, SafeAreaView, Button, StyleSheet, Text} from 'react-native';
-import {RTCPeerConnection, RTCView, mediaDevices} from 'react-native-webrtc';
+import {
+  RTCPeerConnection,
+  RTCView,
+  RTCIceCandidate,
+  RTCSessionDescription,
+  MediaStream,
+  MediaStreamTrack,
+  mediaDevices,
+  registerGlobals} from 'react-native-webrtc';
 import io from "socket.io-client";
 
 export default function WEBRtc({roomNumber}) {
@@ -8,14 +16,14 @@ export default function WEBRtc({roomNumber}) {
   const [remoteStream, setRemoteStream] = useState();
   
 
-  let isCaller, peerConnection;
+  let isCaller, rtcPeerConnection;
   const socket = io("https://desolate-earth-25164.herokuapp.com/");
   // const socket = io("http://192.168.0.102:3000");
   
 
   const constraints = {
-    audio: true,
-    video:false
+    audio: false,
+    video:true
   };
 
 
@@ -26,7 +34,7 @@ export default function WEBRtc({roomNumber}) {
       socket.emit('joinTheRoom', roomNumber);
   };
 
-useEffect(()=>{
+// useEffect(()=>{
  
     socket.on('roomCreated', room=>{
       console.log('room created');
@@ -34,7 +42,6 @@ useEffect(()=>{
       mediaDevices.getUserMedia(constraints)
         .then(stream=>{
           setLocalStream(stream);
-           
           isCaller = true;
         })
     });
@@ -48,109 +55,121 @@ useEffect(()=>{
         });
     });
   
-   
-   
     const configuration = {iceServers: [
       {'urls':'stun:stun.services.mozilla.com'},
       {'urls':'stun:stun.l.google.com:19302'}
     ]};
-    https://github.com/developerajendra/react-native-webrtc-demo
-
-    socket.on('ready', room=>{
-      if(isCaller){
-        console.log('ready');
-        peerConnection = new RTCPeerConnection(configuration);
-        peerConnection.onicecandidate = onIceCandidate;
-        peerConnection.onaddstream = onAddStream;
-        peerConnection.createOffer()
-        .then(offer=>{
-          return peerConnection.setLocalDescription(offer)
-          .then(()=>{
-            console.log('emit offer');
-              socket.emit('offer',{
-                type:'offer',
-                sdp:offer,
-                room: roomNumber
-              });
-            })
-          })
-      }
-    });
-
-    socket.on("offer",e=>{
-      
-        if(!isCaller){
-          peerConnection = new RTCPeerConnection(configuration);
-          console.log('offer');
-          
-          peerConnection.onicecandidate = onIceCandidate;
-          peerConnection.onaddstream = onAddStream;
-          
-          console.log('about to create answer');
-
-          //accept offer from here(ready)
-          peerConnection.setRemoteDescription(e)
-          .then(()=>{
-            return peerConnection.createAnswer()
-            .then(answer=>{
-              return peerConnection.setLocalDescription(answer)
-              .then(()=>{
-                  socket.emit('answer',{
-                    type:'answer',
-                    sdp: answer,
+    
+  
+  socket.on('ready', ()=>{
+    console.log('ready', isCaller);
+    
+    if(isCaller){
+      console.log('ready 1');
+        rtcPeerConnection = new RTCPeerConnection(configuration);
+        rtcPeerConnection.onicecandidate = onIceCandidate;
+        rtcPeerConnection.onaddstream = onAddStream;
+        // rtcPeerConnection.addTrack(localStream.getTracks()[0], localStream);
+        // rtcPeerConnection.addTrack(localStream.getTracks()[1], localStream);
+        rtcPeerConnection.createOffer()
+        .then(sessionDescription=>{
+            rtcPeerConnection.setLocalDescription(sessionDescription).
+            then(()=>{
+                console.log('sending offer', sessionDescription);
+                socket.emit('offer',{
+                    type:'offer',
+                    sdp: sessionDescription,
                     room: roomNumber
-                }); 
-              })
+                });
+            });
+        })
+        .catch(error=>{
+            console.log(error);
+        });
+    }
+  });
+
+
+
+  socket.on('offer', (event)=>{
+    if(!isCaller){
+      console.log('offer');
+      
+        rtcPeerConnection = new RTCPeerConnection(configuration);
+        rtcPeerConnection.onicecandidate = onIceCandidate;
+        rtcPeerConnection.onaddstream = onAddStream;
+        // rtcPeerConnection.addTrack(localStream.getTracks()[0], localStream);
+        // rtcPeerConnection.addTrack(localStream.getTracks()[1], localStream);
+        console.log('reccived offer', event);
+        
+        rtcPeerConnection.setRemoteDescription(new RTCSessionDescription(event))
+        rtcPeerConnection.createAnswer()
+        .then(sessionDescription=>{
+            console.log('sending the answer',sessionDescription);
+            rtcPeerConnection.setLocalDescription(sessionDescription);
+          
+            
+            socket.emit('answer',{
+                type:'answer',
+                sdp: sessionDescription,
+                room: roomNumber
             })
-          });
-        }
-        
-      });
+            
+        })
+        .catch(error=>{
+            console.log(error);
+        });
+    }
+  });
+
+
+  socket.on('answer', event=>{
+    console.log('reccived answer', event);
+    rtcPeerConnection.setRemoteDescription(new RTCSessionDescription(event));
+  });
 
 
 
-     
-    function onAddStream(e){
-      console.log('remote stream', e);
-      if (e.stream && remoteStream !== e.stream) {
-        console.log('remote stream', e.stream);
-        
-        setRemoteStream(e.stream);
-      }
+
+  function onAddStream(event){
+    console.log('add stream');
+    
+    remoteStream.srcObject = event.streams[0];
+    setRemoteStream(event.streams[0]);
   };
 
 
-    function onIceCandidate(event){
-      console.log('ice candidate');
-      
-      if(event.candidate){
-          console.log('sending ice candidate', event.candidate);
-          
-          socket.emit('candidate',{
-              type: 'candidate',
-              label: event.candidate.sdpMLineIndex,
-              id: event.candidate.sdpMid,
-              candidate: event.candidate.candidate,
-              room: roomNumber
-          });
-      }
+  function onIceCandidate(event){
+    console.log('ice candidate');
+    
+    if(event.candidate){
+        console.log('sending ice candidate', event.candidate);
+        
+        socket.emit('candidate',{
+            type: 'candidate',
+            label: event.candidate.sdpMLineIndex,
+            id: event.candidate.sdpMid,
+            candidate: event.candidate.candidate,
+            room: roomNumber
+        });
+    }
   }
 
+
+
+  socket.on('candidate', event=>{
+    console.log('candidate');
     
-
-  socket.on('candidate', e=>{
-    console.log('candidate', isCaller);
-    peerConnection.addIceCandidate(e);
-    peerConnection.addStream(localStream);
-  });
-
-  socket.on('answer', e=>{
-    console.log('answer',e);
-    peerConnection.setRemoteDescription(e);
-  });
+    const candidate = new RTCIceCandidate({
+        sdpMLineIndex: event.label,
+        candidate:event.candidate
+    });
+    console.log('reccived candidated', candidate);
+    
+    rtcPeerConnection.addIceCandidate(candidate);
+  })  
   
-  
-}, [localStream, remoteStream ]);
+// }, [localStream, remoteStream ]);
    
   return (
     <SafeAreaView style={styles.container}>
@@ -227,112 +246,4 @@ const styles = StyleSheet.create({
 
 
 
-
-
-
-
-
-// socket.on("ready",()=>{
-    
-//   if(isCaller){
-//     console.log('ready');
-//     localPC.onicecandidate = onIceCandidateLocal;
-//     localPC.addStream(localST);
-//     // localPC.onaddstream = onAddStream;
-
-//     localPC.createOffer()
-//      .then(offer=>{
-//         localPC.setLocalDescription(offer)
-//         .then(()=>{
-//           remotePC.setRemoteDescription(localPC.localDescription);
-          
-//           console.log('ofer start');
-//           socket.emit('offer',{
-//             type:'offer',
-//             sdp:offer.sdp,
-//             room: roomNumber
-//           });
-//         });
-//      }).catch(error=>{
-//       console.log(error);
-//   });
-//   }
-// });
-
-
-// socket.on("offer",e=>{
-
-//     if(!isCaller){
-//       console.log('offer');
-//         remotePC.onicecandidate = onIceCandidateRemote;
-//         remotePC.onaddstream = onAddStream;
-        
-//         // remotePC.setRemoteDescription(localPC.localDescription);
-//         remotePC.createAnswer().then(answer=>{
-//             console.log('answer start');  
-//               remotePC.setLocalDescription(answer)
-//               .then(()=>{
-//                   localPC.setRemoteDescription(remotePC.localDescription);
-//                   socket.emit('answer',{
-//                     type:'answer',
-//                     sdp: answer.sdp,
-//                     room: roomNumber
-//                 }); 
-//               });                 
-//         }).catch(error=>{
-//           console.log("answer error", error);
-//       });
-//       // console.log(`Answer from remotePC: ${answer.sdp}`);
-//     }
-    
-// });
-    
-// function onIceCandidateLocal(e){
-//   if (e.candidate) {
-//         socket.emit('candidateLocal',{
-//             type: 'candidateLocal',
-//             label: e.candidate.sdpMLineIndex,
-//             id: e.candidate.sdpMid,
-//             candidate: e.candidate.candidate,
-//             room: roomNumber
-//         });
-//     }
-// }
-
-     
-// function onIceCandidateRemote(e){
-//   if (e.candidate) {
-//         socket.emit('candidateRemote',{
-//             type: 'candidateRemote',
-//             label: e.candidate.sdpMLineIndex,
-//             id: e.candidate.sdpMid,
-//             candidate: e.candidate.candidate,
-//             room: roomNumber
-//         });
-//     }
-// }
-
-// socket.on('candidateLocal', e=>{
-//   console.log('candidateLocal', e.candidate);
-//   remotePC.addIceCandidate(e.candidate);
-// });
-
-// socket.on('candidateRemote', e=>{
-//   console.log('candidateRemote');
-//   localPC.addIceCandidate(e.candidate);
-// });
-
-
-// function onAddStream(e){
-//   console.log('add remote stream', e.steram);
-  
-//   if (e.stream && remoteStream !== e.stream) {
-//     setRemoteStream(e.stream);
-//   }
-// };
-
-
-// socket.on('answer', e=>{
-//   console.log('answer');
-//   localPC.setRemoteDescription(remotePC.localDescription);
-// });
+ 

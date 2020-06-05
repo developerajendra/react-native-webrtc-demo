@@ -12,7 +12,7 @@ export default function WEBRtc({ roomNumber }) {
   // const socket = io("http://192.168.0.102:3000");
 
   const constraints = {
-    audio: false,
+    audio: true,
     video: true
   };
 

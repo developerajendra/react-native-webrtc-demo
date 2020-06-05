@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 
 export const RTCRoom = ({getRoom}) =>{
-    const [room, setRoom] = useState('rajen');
+    const [room, setRoom] = useState('');
 
     const createOrJoinRoom = ()=>{
         getRoom(room);
